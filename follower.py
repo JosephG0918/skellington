@@ -222,8 +222,10 @@ def main():
             cv2.imshow("Camera", frame)
             cv2.imshow("Mask", mask)
 
+            # Comment out if planning to run in crontab
             if cv2.waitKey(1) & 0xFF == 27:
                 break
+
     except Exception as e:
         logger.error("Unhandled exception occurred!")
         logger.error(traceback.format_exc())
@@ -238,4 +240,5 @@ def remap(x, in_min, in_max, out_min, out_max):
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 if __name__ == "__main__":
+
     main()
