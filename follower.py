@@ -10,9 +10,9 @@ import traceback
 # Logging setup
 # --------------------
 logging.basicConfig(
-    filename="/home/x/logs/animatronic.log",
+    filename="/home/x/logs/follower.log",
     level=logging.INFO,
-    filemode="w",
+    filemode="w", # remove if you want previous log entries to stay
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
@@ -118,7 +118,6 @@ def main():
         varThreshold=16
     )
 
-    # Comment out if planning to run in crontab
     cv2.namedWindow("Camera", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Camera", 640, 480)
     cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
@@ -235,9 +234,11 @@ def main():
         picam2.stop()
         cv2.destroyAllWindows()
 
+# Converts the position of a detected object from camera coordinates into a servo angle
 def remap(x, in_min, in_max, out_min, out_max):
     x = max(in_min, min(x, in_max))
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 if __name__ == "__main__":
     main()
+
