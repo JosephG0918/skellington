@@ -5,14 +5,15 @@ import random
 import time
 import logging
 import traceback
+from servos_package import helpers
 
 # --------------------
 # Logging setup
 # --------------------
 logging.basicConfig(
-    filename="/home/x/logs/follower.log",
+    filename="/home/oreo-pi/logs/follower.log",
     level=logging.INFO,
-    filemode="w", # remove if you want previous log entries to stay
+    filemode="w",
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
@@ -103,6 +104,11 @@ def main():
     kit = ServoKit(channels=16)
 
     # --------------------
+    # Calibration runs first; not needed but I deem it necessary for safety
+    # --------------------
+    helpers.calibration(kit)
+
+    # --------------------
     # Camera setup
     # --------------------
     picam2 = Picamera2()
@@ -118,10 +124,10 @@ def main():
         varThreshold=16
     )
 
-    cv2.namedWindow("Camera", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Camera", 640, 480)
-    cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Mask", 640, 480)
+    #cv2.namedWindow("Camera", cv2.WINDOW_NORMAL)
+    #cv2.resizeWindow("Camera", 640, 480)
+    #cv2.namedWindow("Mask", cv2.WINDOW_NORMAL)
+    #cv2.resizeWindow("Mask", 640, 480)
 
     try:
         while True:
@@ -185,16 +191,6 @@ def main():
             tilt_angle_ave = tilt_angle * tilt_alpha + tilt_angle_ave * (1 - tilt_alpha)
 
             # --------------------
-            # Drive servos
-            # --------------------
-            kit.servo[L_EYE_BALL].angle = int(eyes_angle_ave)
-            kit.servo[R_EYE_BALL].angle = int(eyes_angle_ave)
-            kit.servo[NECK_X].angle = int(pan_angle_ave)
-
-            kit.servo[NECK_Y_RIGHT].angle = int(tilt_angle_ave)
-            kit.servo[NECK_Y_LEFT].angle = int(180 - tilt_angle_ave)
-
-            # --------------------
             # Eyelids
             # --------------------
             if current_time - last_eyelid_time > 3.0:
@@ -204,9 +200,6 @@ def main():
             L_EYE_LID_ave = L_target * lid_alpha + L_EYE_LID_ave * (1 - lid_alpha)
             R_EYE_LID_ave = R_target * lid_alpha + R_EYE_LID_ave * (1 - lid_alpha)
 
-            kit.servo[L_EYE_LID].angle = int(L_EYE_LID_ave)
-            kit.servo[R_EYE_LID].angle = int(R_EYE_LID_ave)
-
             # --------------------
             # Jaw
             # --------------------
@@ -215,15 +208,26 @@ def main():
                 last_jaw_time = current_time
 
             JAW_ave = JAW_target * jaw_alpha + JAW_ave * (1 - jaw_alpha)
+
+            # --------------------
+            # Drive servos
+            # --------------------
+            kit.servo[L_EYE_BALL].angle = int(eyes_angle_ave)
+            kit.servo[R_EYE_BALL].angle = int(eyes_angle_ave)
+            kit.servo[L_EYE_LID].angle = int(L_EYE_LID_ave)
+            kit.servo[R_EYE_LID].angle = int(R_EYE_LID_ave)
+
+            kit.servo[NECK_X].angle = int(pan_angle_ave)
+            kit.servo[NECK_Y_RIGHT].angle = int(tilt_angle_ave)
+            kit.servo[NECK_Y_LEFT].angle = int(180 - tilt_angle_ave)
+
             kit.servo[JAW].angle = int(JAW_ave)
 
-            # Comment out if planning to run in crontab
-            cv2.imshow("Camera", frame)
-            cv2.imshow("Mask", mask)
+            #cv2.imshow("Camera", frame)
+            #cv2.imshow("Mask", mask)
 
-            # Comment out if planning to run in crontab
-            if cv2.waitKey(1) & 0xFF == 27:
-                break
+            #if cv2.waitKey(1) & 0xFF == 27:
+                #break
 
     except Exception as e:
         logger.error("Unhandled exception occurred!")
@@ -234,10 +238,12 @@ def main():
         picam2.stop()
         cv2.destroyAllWindows()
 
+
 # Converts the position of a detected object from camera coordinates into a servo angle
 def remap(x, in_min, in_max, out_min, out_max):
     x = max(in_min, min(x, in_max))
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
 
 if __name__ == "__main__":
     main()
