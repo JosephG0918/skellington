@@ -7,9 +7,7 @@ import logging
 import traceback
 from servos_package import helpers
 
-# --------------------
 # Logging setup
-# --------------------
 logging.basicConfig(
     filename="/home/oreo-pi/logs/follower.log",
     level=logging.INFO,
@@ -19,9 +17,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# --------------------
 # Servo channels
-# --------------------
 L_EYE_BALL = 0
 L_EYE_LID = 1
 R_EYE_BALL = 2
@@ -32,15 +28,11 @@ NECK_Y_RIGHT = 6
 NECK_Y_LEFT = 7
 
 def main():
-    # --------------------
     # Camera X range
-    # --------------------
     IN_X_MIN = 0.0
     IN_X_MAX = 160.0
 
-    # --------------------
     # Neck PAN (X axis)
-    # --------------------
     X_LEFT = 160.0
     X_CENTER = 90.0
     X_RIGHT = 30.0
@@ -49,9 +41,7 @@ def main():
     pan_angle_ave = X_CENTER
     pan_alpha = 0.15
 
-    # --------------------
     # Neck TILT (Y axis)
-    # --------------------
     Y_UP = 40
     Y_CENTER = 90
     Y_DOWN = 140
@@ -65,9 +55,7 @@ def main():
     TILT_INTERVAL = 15.0    # how often nods may occur
     TILT_HOLD_TIME = 3.0    # how long to hold up/down
 
-    # --------------------
     # Eyes
-    # --------------------
     EYE_LEFT = 113.0
     EYE_CENTER = 90.0
     EYE_RIGHT = 66.0
@@ -76,9 +64,7 @@ def main():
     eyes_angle_ave = EYE_CENTER
     eyes_alpha = 0.30
 
-    # --------------------
     # Eyelids & jaw
-    # --------------------
     L_EYE_LID_ave = 90
     R_EYE_LID_ave = 105
     JAW_ave = 108
@@ -93,9 +79,7 @@ def main():
     last_eyelid_time = time.time()
     last_jaw_time = time.time()
 
-    # --------------------
     # Turn-taking logic
-    # --------------------
     last_turn_time = time.time()
     TURN_DURATION = 4.0
     EYES_BIAS = 0.75
@@ -103,14 +87,10 @@ def main():
 
     kit = ServoKit(channels=16)
 
-    # --------------------
-    # Calibration runs first; not needed but I deem it necessary for safety
-    # --------------------
+    # Calibration runs first; not needed, but I prefer all servos to be in their default positioning before anything beyond executes
     helpers.calibration(kit)
 
-    # --------------------
     # Camera setup
-    # --------------------
     picam2 = Picamera2()
     picam2.configure(
         picam2.create_preview_configuration(
@@ -158,9 +138,7 @@ def main():
 
             current_time = time.time()
 
-            # --------------------
             # Turn taking
-            # --------------------
             if current_time - last_turn_time > TURN_DURATION:
                 active_controller = random.choices(
                     ["eyes", "neck"],
@@ -170,14 +148,12 @@ def main():
 
             if active_controller == "eyes":
                 eyes_angle_ave = eyes_angle * eyes_alpha + eyes_angle_ave * (1 - eyes_alpha)
-                pan_angle_ave = X_CENTER * pan_alpha + pan_angle_ave * (1 - pan_alpha)
+                pan_angle_ave = X_CENTER * pan_alpha + pan_angle_ave * (1 - pan_alpha) # Default panning angle (looking straight)
             else:
                 pan_angle_ave = pan_angle * pan_alpha + pan_angle_ave * (1 - pan_alpha)
-                eyes_angle_ave = EYE_CENTER * eyes_alpha + eyes_angle_ave * (1 - eyes_alpha)
+                eyes_angle_ave = EYE_CENTER * eyes_alpha + eyes_angle_ave * (1 - eyes_alpha) # Default eyes angle (looking straight)
 
-            # --------------------
             # TILT (nod logic)
-            # --------------------
             if tilt_hold_start is None:
                 if current_time - last_tilt_time > TILT_INTERVAL:
                     tilt_angle = random.choice([Y_UP, Y_DOWN])
@@ -190,9 +166,7 @@ def main():
 
             tilt_angle_ave = tilt_angle * tilt_alpha + tilt_angle_ave * (1 - tilt_alpha)
 
-            # --------------------
             # Eyelids
-            # --------------------
             if current_time - last_eyelid_time > 3.0:
                 L_target, R_target = random.choice([(120, 70), (50, 140), (90, 105)])
                 last_eyelid_time = current_time
@@ -200,18 +174,14 @@ def main():
             L_EYE_LID_ave = L_target * lid_alpha + L_EYE_LID_ave * (1 - lid_alpha)
             R_EYE_LID_ave = R_target * lid_alpha + R_EYE_LID_ave * (1 - lid_alpha)
 
-            # --------------------
             # Jaw
-            # --------------------
             if current_time - last_jaw_time > 5.0:
                 JAW_target = random.choice([68, 88, 108])
                 last_jaw_time = current_time
 
             JAW_ave = JAW_target * jaw_alpha + JAW_ave * (1 - jaw_alpha)
 
-            # --------------------
             # Drive servos
-            # --------------------
             kit.servo[L_EYE_BALL].angle = int(eyes_angle_ave)
             kit.servo[R_EYE_BALL].angle = int(eyes_angle_ave)
             kit.servo[L_EYE_LID].angle = int(L_EYE_LID_ave)
@@ -238,12 +208,10 @@ def main():
         picam2.stop()
         cv2.destroyAllWindows()
 
-
 # Converts the position of a detected object from camera coordinates into a servo angle
 def remap(x, in_min, in_max, out_min, out_max):
     x = max(in_min, min(x, in_max))
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
-
 
 if __name__ == "__main__":
     main()
